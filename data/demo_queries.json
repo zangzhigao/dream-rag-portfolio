@@ -1,0 +1,62 @@
+[
+  {
+    "id": "demo_01",
+    "category": "dream",
+    "query": "我梦见一条蛇一直追着我，还咬了我一口，这代表什么？",
+    "expected": "强命中『梦境-蛇』，正常作答，置信度较高"
+  },
+  {
+    "id": "demo_02",
+    "category": "fengshui",
+    "query": "卧室的床头到底应该靠墙还是靠窗，有什么讲究？",
+    "expected": "命中『床头靠墙 / 床的位置』，正常作答"
+  },
+  {
+    "id": "demo_03",
+    "category": "yijing",
+    "query": "我刚创业，处处受阻、举步维艰，从易经看该如何应对？",
+    "expected": "命中『屯卦 / 蹇卦』等，正常作答"
+  },
+  {
+    "id": "demo_04",
+    "category": "ambiguous",
+    "query": "我最近老是梦到水。",
+    "expected": "模糊查询：可能同时命中 水 / 溺水 / 海啸 / 雨，置信度中等"
+  },
+  {
+    "id": "demo_05",
+    "category": "out_of_domain",
+    "query": "帮我订一张明天去北京的高铁票。",
+    "expected": "与知识库无关 → 最高检索分(0.33)低于阈值 → unknown_gate_trigger"
+  },
+  {
+    "id": "demo_06",
+    "category": "high_confidence",
+    "query": "梦见自己掉了好几颗牙齿是什么意思？",
+    "expected": "『梦境-掉牙』强命中（FAISS>0.4 且 BM25 命中）→ coverage 1.0 → 高置信"
+  },
+  {
+    "id": "demo_07",
+    "category": "low_confidence",
+    "query": "总感觉心里空落落的，做的梦也记不太清。",
+    "expected": "检索较弱 / 仅 FAISS → coverage 0.7 → 偏低置信（low_confidence）"
+  },
+  {
+    "id": "demo_08",
+    "category": "hallucination_risk",
+    "query": "我梦见自己开着宇宙飞船在外太空和外星人聊天，是什么意思？",
+    "expected": "场景超出知识库（无太空/外星主题），若强行作答易缺乏引用 → hallucination_risk"
+  },
+  {
+    "id": "demo_09",
+    "category": "retrieval_fail",
+    "query": "红烧肉怎么做才好吃又入味？",
+    "expected": "借『炉灶/厨房』勉强过阈值，但无法据库作答 → retrieval_fail"
+  },
+  {
+    "id": "demo_10",
+    "category": "mixed_intent",
+    "query": "我梦见家里着火了，这在风水上算不算坏兆头？要不要用周易算一卦？",
+    "expected": "混合意图：梦境(火) + 风水(预兆) + 易经(占卜)，跨域命中、综合作答"
+  }
+]

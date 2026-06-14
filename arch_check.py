@@ -20,7 +20,11 @@ from pathlib import Path
 BASE = Path(__file__).resolve().parent
 
 OWNER = "app.py"                                  # 唯一可编排管线的文件
-CONSUMERS = ["streamlit_app.py", "evaluate.py"]  # 必须只经 run_pipeline 的入口
+CONSUMERS = [                                      # 必须只经 run_pipeline 的入口
+    "streamlit_app.py",
+    "evaluate.py",
+    "pages/1_System_Showcase.py",
+]
 
 # 消费端禁止直接导入的"管线内部"模块 + 底层检索/重排库
 FORBIDDEN_MODULES = {
