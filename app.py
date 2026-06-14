@@ -29,10 +29,10 @@ from reranker import rerank                 # 重排
 from prompt import build_rag_prompt
 from llm import call_deepseek
 from parser import parse_json_response, FALLBACK_REASON
-import badcase_v2                           # v2 自动分类 + 落盘
-from stats import format_stats
+from evaluator import badcase_v2                           # v2 自动分类 + 落盘
+from evaluator.stats import format_stats
 
-VERSION = "v1.0-stable"     # 冻结基线版本标记（详见 CHANGELOG.md）
+VERSION = "v1.0-stable"     # 冻结基线版本标记（详见 docs/CHANGELOG.md）
 
 BASE_DIR = Path(__file__).resolve().parent
 EMB_PATH = BASE_DIR / "data" / "embeddings.npy"

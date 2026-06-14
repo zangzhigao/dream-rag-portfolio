@@ -3,14 +3,14 @@
 
 读取 data/badcases.jsonl，汇总各类问题计数，并列出最近若干条。
 单独运行：
-    python stats.py
+    python -m evaluator.stats
 也被 app.py 的 /stats 命令调用。
 """
 import json
 from collections import Counter
 from pathlib import Path
 
-LOG_PATH = Path(__file__).resolve().parent / "data" / "badcases.jsonl"
+LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "badcases.jsonl"
 
 
 def load_badcases() -> list[dict]:

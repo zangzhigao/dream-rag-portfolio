@@ -22,7 +22,7 @@ import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 
 from app import run_pipeline, ensure_ready
-import evaluate
+from evaluator import evaluate
 
 st.set_page_config(page_title="RAG 统一问答与评测", page_icon="🔮")
 

@@ -11,7 +11,7 @@ from pathlib import Path
 
 import streamlit as st
 
-import badcase_v2
+from evaluator import badcase_v2
 from app import run_pipeline, ensure_ready, VERSION
 
 st.set_page_config(page_title="📊 System Showcase", page_icon="📊", layout="wide")
@@ -35,8 +35,8 @@ st.code(
    用户查询  ──▶  │  检索(FAISS 语义 + BM25 词法) → Hybrid 融合 → Rerank 重排   │ ──▶ 标准 JSON
                  │  → 置信度计算 → 错误分类 → LLM 生成                          │
                  └──────────────────────────────────────────────────────────┘
-   三入口共用 ：   CLI(app.py)        网页(streamlit)        批量评测(evaluate.py)
-   实现层     ：   retriever/(faiss·bm25·hybrid)   reranker.py   badcase_v2.py
+   三入口共用 ：   CLI(app.py)     网页(streamlit)     批量评测(evaluator/evaluate.py)
+   实现层     ：   retriever/(faiss·bm25·hybrid)   reranker.py   evaluator/badcase_v2.py
    守卫       ：   arch_check.py（锁定单一管线，违规即拦截）
 """,
     language="text",

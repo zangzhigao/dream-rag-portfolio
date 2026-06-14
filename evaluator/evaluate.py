@@ -6,7 +6,7 @@
 evaluation_report.json。
 
 用法：
-    python evaluate.py
+    python -m evaluator.evaluate     # 在项目根目录运行
 
 说明：评测期间临时关闭 v2 bad case 落盘，避免测试 query 污染线上 badcases_v2.jsonl。
 """
@@ -16,10 +16,10 @@ import contextlib
 from collections import Counter
 from pathlib import Path
 
-import badcase_v2
 from app import run_pipeline, ensure_ready
+from evaluator import badcase_v2
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent      # 项目根（evaluator/ 的上一级）
 TEST_PATH = BASE_DIR / "data" / "test_queries.json"
 REPORT_PATH = BASE_DIR / "evaluation_report.json"
 

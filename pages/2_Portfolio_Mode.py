@@ -12,7 +12,7 @@ from pathlib import Path
 
 import streamlit as st
 
-import badcase_v2
+from evaluator import badcase_v2
 from app import run_pipeline, ensure_ready, VERSION
 
 st.set_page_config(page_title="🚀 Portfolio Mode", page_icon="🚀", layout="wide")

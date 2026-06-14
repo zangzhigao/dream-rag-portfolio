@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1-dev — 仓库结构整理（GitHub 上传准备）
+
+为开源 / 作品集上传做的工程化整理，**不改动 `run_pipeline` 管线与标准输出契约**（v1.0 基线行为不变）。
+
+- 评测 / 监控相关模块归入 `evaluator/` 包：`evaluate.py`、`stats.py`、`badcase.py`、`badcase_v2.py`。
+- 文档归入 `docs/`：`ARCHITECTURE.md`、`CHANGELOG.md`。
+- 新增 `outputs/.gitkeep`，保留导出目录结构（产物本身仍被 `.gitignore` 忽略）。
+- 相应更新导入路径（`from evaluator import ...`）、`arch_check.py` 消费端清单与 `README` 命令（`python -m evaluator.evaluate`）。
+- `arch_check.py` 在 Windows GBK 控制台下输出 UTF-8，避免打印 `✅` 时崩溃（修复，不影响退出码）。
+
 ## v1.0-stable — 基线冻结（2026-06-14）
 
 将当前系统冻结为 **v1.0 稳定基线**。
@@ -9,7 +19,7 @@
 - 重排：cross-encoder rerank（缺模型时自动 mock 降级）
 - 置信度：客观计算 `retrieval_score(top1 hybrid) × coverage_factor`
 - 异常分类：v2 自动归类（unknown_gate_trigger / retrieval_fail / hallucination_risk / low_confidence）+ 落盘
-- 评测：`evaluate.py` 批量跑测试集，产出 `evaluation_report.json`
+- 评测：`evaluator/evaluate.py` 批量跑测试集，产出 `evaluation_report.json`
 - 统一入口：`app.run_pipeline(query)` —— CLI / Streamlit / evaluate 三端共用
 - 标准输出契约（5 字段）：`answer, sources, confidence, error_type, retrieval_breakdown`
 - 调试：`run_pipeline(..., debug_mode=True)` 附 `debug` 字段，默认关闭

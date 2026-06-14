@@ -7,7 +7,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-LOG_PATH = Path(__file__).resolve().parent / "data" / "badcases.jsonl"
+LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "badcases.jsonl"
 
 
 def log_badcase(query: str, result: dict, tag: str) -> None:

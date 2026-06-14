@@ -3,7 +3,7 @@
 
 规则：
   1. run_pipeline 只能在 app.py 定义（唯一实现入口）。
-  2. 消费端（streamlit_app.py / evaluate.py）必须只经 run_pipeline 取数据，
+  2. 消费端（streamlit_app.py / evaluator/evaluate.py）必须只经 run_pipeline 取数据，
      禁止直接导入检索/重排/置信度的内部模块或函数（即禁止绕过管线）。
   3. 禁止重复实现 retrieval / rerank / confidence（消费端不得引入底层检索库）。
 
@@ -17,12 +17,16 @@ import ast
 import sys
 from pathlib import Path
 
+# Windows 默认 GBK 控制台无法输出 ✅ 等字符，统一切到 UTF-8（不影响退出码 / CI）
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 BASE = Path(__file__).resolve().parent
 
 OWNER = "app.py"                                  # 唯一可编排管线的文件
 CONSUMERS = [                                      # 必须只经 run_pipeline 的入口
     "streamlit_app.py",
-    "evaluate.py",
+    "evaluator/evaluate.py",
     "pages/1_System_Showcase.py",
     "pages/2_Portfolio_Mode.py",
 ]

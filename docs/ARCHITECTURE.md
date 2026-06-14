@@ -13,8 +13,8 @@
             │   返回标准 JSON（5 字段）                  │
             └───────────────┬─────────────────────────┘
         ┌───────────────────┼───────────────────────┐
-  python app.py "q"   streamlit_app.py          evaluate.py
-   (CLI)               (网页)                     (批量评测)
+  python app.py "q"   streamlit_app.py     evaluator/evaluate.py
+   (CLI)               (网页)                  (批量评测)
         └──── 三个入口只调 run_pipeline，绝不自行检索 ────┘
 
 实现层（被 run_pipeline 调用，唯一实现处，不得复制）：
@@ -27,7 +27,7 @@
 
 1. **禁止绕过**：任何用户侧数据流入口都必须经 `run_pipeline`，不得直接调用
    `hybrid_topk / faiss_topk / bm25_topk / rerank / _compute_confidence`。
-2. **统一入口**：`app.py`（CLI）、`streamlit_app.py`、`evaluate.py` 一律调用 `run_pipeline`。
+2. **统一入口**：`app.py`（CLI）、`streamlit_app.py`、`evaluator/evaluate.py` 一律调用 `run_pipeline`。
 3. **禁止重复实现**：retrieval / rerank / confidence 各自只有一处实现，消费端不得引入
    底层库（`faiss / rank_bm25 / sentence_transformers / jieba`）自行实现。
 

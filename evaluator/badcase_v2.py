@@ -15,7 +15,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-LOG_PATH = Path(__file__).resolve().parent / "data" / "badcases_v2.jsonl"
+LOG_PATH = Path(__file__).resolve().parent.parent / "data" / "badcases_v2.jsonl"
 CONF_THRESHOLD = 0.5
 
 
