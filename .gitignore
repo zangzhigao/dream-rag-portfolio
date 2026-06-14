@@ -1,0 +1,22 @@
+# 嵌入模型权重（~184MB，可用 download_model.py 重新下载）
+models/
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 生成物（运行 embed.py / index.py 自动重建）
+data/embeddings.npy
+data/meta.json
+data/faiss.index
+*.npy
+*.index
+
+# 运行时日志
+data/badcases.jsonl
+
+# 密钥 / 环境变量（绝不提交）
+.env
+*.key
+*.pem

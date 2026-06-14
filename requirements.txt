@@ -1,0 +1,7 @@
+sentence-transformers>=2.2
+faiss-cpu>=1.7
+numpy>=1.21
+requests>=2.25
+streamlit>=1.30
+# 可选：从 ModelScope 下载嵌入模型（国内更稳）
+# modelscope>=1.9
