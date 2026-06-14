@@ -15,6 +15,11 @@ data/faiss.index
 
 # 运行时日志
 data/badcases.jsonl
+data/badcases_v2.jsonl
+
+# 评测 / 导出产物（生成物）
+evaluation_report.json
+outputs/
 
 # 密钥 / 环境变量（绝不提交）
 .env

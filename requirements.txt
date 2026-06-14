@@ -3,5 +3,7 @@ faiss-cpu>=1.7
 numpy>=1.21
 requests>=2.25
 streamlit>=1.30
+rank_bm25>=0.2
+jieba>=0.42
 # 可选：从 ModelScope 下载嵌入模型（国内更稳）
 # modelscope>=1.9
