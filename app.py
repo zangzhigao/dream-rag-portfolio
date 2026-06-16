@@ -315,5 +315,25 @@ def main() -> None:
         print("-" * 60 + "\n")
 
 
+def _running_under_streamlit() -> bool:
+    """是否由 `streamlit run` 启动（Streamlit Runtime 存在）。
+
+    用于区分两种 __main__ 场景——二者 __name__ 都是 "__main__"：
+      · python app.py            → 终端 CLI（input / 交互循环）
+      · streamlit run app.py     → 云端 UI（绝不能进入 input 循环，否则页面卡在 CLI 文本）
+    """
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        return get_script_run_ctx(suppress_warning=True) is not None
+    except Exception:
+        return False
+
+
 if __name__ == "__main__":
-    main()
+    if _running_under_streamlit():
+        # 被当作 Streamlit 主文件运行：渲染真正的 UI，而不是进入 CLI 交互。
+        # 正确部署应把 Streamlit 主文件设为 streamlit_app.py；此处兜底，使 app.py 作主文件也能出 UI。
+        import runpy
+        runpy.run_path(str(BASE_DIR / "streamlit_app.py"), run_name="__main__")
+    else:
+        main()

@@ -28,6 +28,13 @@
 - 依赖拆分：`requirements.txt` 精简为云端可部署版（streamlit / pandas / numpy / rank-bm25 / jieba / requests，
   **不含重型 ML 包**）；完整本地版（FAISS+BGE+Rerank）额外依赖移入 `requirements-local.txt`。
 
+### 入口修复：Streamlit UI 而非 CLI
+- `streamlit run app.py` 会令 `__name__ == "__main__"` 成立，导致旧代码进入 CLI 交互（`input()` / `while True`），
+  云端页面卡在「RAG 统一入口 …」文本。修复：`app.py` 的 `__main__` 用 `get_script_run_ctx()` 探测 Streamlit
+  runtime——在 Streamlit 下经 `runpy` 渲染 `streamlit_app.py`（真正的 UI），仅终端 `python app.py` 才跑 CLI。
+- 真正的 Streamlit 主入口是 **`streamlit_app.py`**（多页：`pages/1_System_Showcase.py`、`pages/2_Portfolio_Mode.py`）；
+  推荐把 Streamlit Cloud 的 Main file 指向它，本修复同时兜底了误用 `app.py` 作主文件的情况。
+
 ## v1.0-stable — 基线冻结（2026-06-14）
 
 将当前系统冻结为 **v1.0 稳定基线**。
