@@ -7,6 +7,8 @@
     data/embeddings.npy   每条数据的向量（已归一化）
     data/meta.json        与向量行一一对应的元数据
 """
+from __future__ import annotations   # 延迟注解求值：get_model 的 -> SentenceTransformer 注解不在导入期解析
+
 import os
 
 # 国内访问 huggingface.co 常常超时，提前指向镜像（可被外部环境变量覆盖）。
@@ -16,7 +18,8 @@ import json
 from pathlib import Path
 
 import numpy as np
-from sentence_transformers import SentenceTransformer
+# 注意：sentence_transformers / torch 是重依赖，改为在 get_model() 内惰性导入，
+# 使云端 BM25-only 模式（未安装这些包）也能正常 import embed 并启动。
 
 # ---------- 配置（被 index.py / search.py 复用） ----------
 BASE_DIR = Path(__file__).resolve().parent
@@ -44,6 +47,7 @@ def get_model() -> SentenceTransformer:
     """
     global _model
     if _model is None:
+        from sentence_transformers import SentenceTransformer   # 惰性导入：仅本地 FAISS 模式需要
         if LOCAL_MODEL_DIR.exists():
             print(f"[embed] 从本地加载模型 {LOCAL_MODEL_DIR.name} ...")
             _model = SentenceTransformer(str(LOCAL_MODEL_DIR))

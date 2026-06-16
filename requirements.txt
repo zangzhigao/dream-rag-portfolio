@@ -1,9 +1,11 @@
-sentence-transformers>=2.2
-faiss-cpu>=1.7
-numpy>=1.21
-requests>=2.25
+# 云端可部署版本（Streamlit Cloud）—— BM25-only 演示模式，零重型 ML 依赖。
+# 这些就是 BM25-only 模式运行所需的全部依赖（jieba 用于中文分词，纯 Python 轻量包）。
+#
+# 完整本地版（FAISS 语义检索 + BGE 句向量 + Cross-Encoder 重排）的额外依赖见
+# requirements-local.txt：  pip install -r requirements.txt -r requirements-local.txt
 streamlit>=1.30
+pandas>=1.3
+numpy>=1.21
 rank_bm25>=0.2
 jieba>=0.42
-# 可选：从 ModelScope 下载嵌入模型（国内更稳）
-# modelscope>=1.9
+requests>=2.25

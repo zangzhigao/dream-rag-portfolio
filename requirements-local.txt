@@ -1,0 +1,10 @@
+# 完整本地版额外依赖：FAISS 语义检索 + BGE 句向量 + Cross-Encoder 重排。
+# 安装： pip install -r requirements.txt -r requirements-local.txt
+#
+# 注意：sentence-transformers 会自动带入 torch / transformers / torchvision 等重型依赖，
+# 体积大、在 Streamlit Cloud 上易超时/OOM——所以云端默认不装这些（见 requirements.txt）。
+-r requirements.txt
+sentence-transformers>=2.2
+faiss-cpu>=1.7
+# 可选：从 ModelScope 下载嵌入模型（国内更稳）
+# modelscope>=1.9

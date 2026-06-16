@@ -88,7 +88,8 @@ query
 
 ## 7. Demo Flow —— 如何跑
 ```powershell
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+# 完整本地版（FAISS + BGE + Rerank）：装齐重型依赖
+pip install -r requirements.txt -r requirements-local.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 python download_model.py                 # 下载本地中文向量模型（离线可用）
 $env:DEEPSEEK_API_KEY = "你的key"         # 生成用（不设也能跑，仅检索/拒答）
 
@@ -98,10 +99,11 @@ python -m evaluator.evaluate             # ③ 批量评测 → evaluation_repor
 ```
 
 ### ☁️ Streamlit Cloud 部署（云端演示）
-线上常无法下载本地句向量模型，系统会**自动降级为 BM25-only**（不红屏，仍保留来源 / 置信度 / 拒答 / 评测）。
-- 推荐在 Streamlit Secrets/环境变量里设 `RAG_FORCE_BM25 = "1"`，跳过注定失败的模型下载、加速冷启动。
+云端用**精简版 `requirements.txt`**（仅 streamlit / pandas / numpy / rank-bm25 / jieba / requests，
+**不含 torch / faiss / sentence-transformers**），以 **BM25-only 模式**运行——构建快、不会因重型 ML 包超时/OOM。
+- 在 Streamlit Secrets/环境变量里设 `RAG_FORCE_BM25 = "1"`：启动阶段就不会 import 任何重依赖（含 torchvision），从根本上避免 `ModuleNotFoundError`。
 - 设了 `DEEPSEEK_API_KEY` 才会生成答案；不设也不崩，仅做检索与拒答。
-- 页面顶部会显示「云端演示模式」横幅。完整 FAISS + BM25 + Rerank 体验请在本地运行。
+- 页面顶部会显示「云端演示模式」横幅。完整 FAISS + BM25 + Rerank 体验请在本地装 `requirements-local.txt` 运行。
 
 ---
 

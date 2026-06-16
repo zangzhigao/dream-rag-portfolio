@@ -6,8 +6,7 @@
 """
 import sys
 import json
-
-import faiss
+# faiss 是重依赖 → 移入 _load() 惰性导入，使云端 BM25-only 模式无需安装 faiss 即可 import。
 
 from embed import get_model, META_PATH, QUERY_INSTRUCTION
 from index import INDEX_PATH
@@ -20,6 +19,7 @@ def _load():
     """惰性加载索引与元数据，只读一次。"""
     global _index, _meta
     if _index is None:
+        import faiss   # 惰性导入：仅本地 FAISS 检索时需要
         if not INDEX_PATH.exists() or not META_PATH.exists():
             raise SystemExit("索引或元数据缺失，请先运行：python embed.py 然后 python index.py")
         _index = faiss.read_index(str(INDEX_PATH))

@@ -56,6 +56,9 @@ def _get_cross_encoder():
     global _cross_encoder, _ce_tried
     if not _ce_tried:
         _ce_tried = True
+        if os.environ.get("RAG_FORCE_BM25") == "1":
+            _cross_encoder = None      # 云端 BM25-only：不导入 sentence_transformers，直接走 mock
+            return _cross_encoder
         try:
             from sentence_transformers import CrossEncoder
             path = str(LOCAL_RERANK_DIR) if LOCAL_RERANK_DIR.exists() else RERANK_MODEL

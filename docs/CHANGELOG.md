@@ -19,6 +19,15 @@
 - sources / confidence / unknown / badcase / evaluation 展示全部保留；本地有模型时仍走完整 FAISS+BGE 路径。
 - 可设环境变量 `RAG_FORCE_BM25=1` 显式强制 BM25-only（云端推荐：跳过注定失败的下载尝试）。
 
+### 重依赖惰性加载（彻底解决云端 import 崩溃）
+- `sentence_transformers` / `faiss` 改为**惰性导入**：`embed.get_model()`、`index.main()`、`search._load()`
+  内部按需 import；`embed.py` 加 `from __future__ import annotations` 避免注解期解析。
+- `reranker` 在 `RAG_FORCE_BM25=1` 时直接走 mock，不再尝试 import `sentence_transformers`。
+- 效果：设 `RAG_FORCE_BM25=1` 后，启动与查询全程不 import torch / torchvision / sentence-transformers / faiss，
+  根治 `ModuleNotFoundError: No module named 'torchvision'`。
+- 依赖拆分：`requirements.txt` 精简为云端可部署版（streamlit / pandas / numpy / rank-bm25 / jieba / requests，
+  **不含重型 ML 包**）；完整本地版（FAISS+BGE+Rerank）额外依赖移入 `requirements-local.txt`。
+
 ## v1.0-stable — 基线冻结（2026-06-14）
 
 将当前系统冻结为 **v1.0 稳定基线**。

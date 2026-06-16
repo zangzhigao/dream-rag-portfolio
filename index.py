@@ -9,7 +9,7 @@
 from pathlib import Path
 
 import numpy as np
-import faiss
+# faiss 是重依赖，仅本地构建索引时需要 → 移入 main() 惰性导入（云端 BM25-only 不安装 faiss）。
 
 from embed import EMB_PATH
 
@@ -18,6 +18,8 @@ INDEX_PATH = BASE_DIR / "data" / "faiss.index"
 
 
 def main() -> None:
+    import faiss   # 惰性导入：仅本地构建索引时需要
+
     if not EMB_PATH.exists():
         raise SystemExit("找不到 embeddings.npy，请先运行：python embed.py")
 
