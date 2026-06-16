@@ -12,7 +12,7 @@ from pathlib import Path
 import streamlit as st
 
 from evaluator import badcase_v2
-from app import run_pipeline, ensure_ready, VERSION
+from app import run_pipeline, ensure_ready, VERSION, cloud_mode
 
 st.set_page_config(page_title="📊 System Showcase", page_icon="📊", layout="wide")
 
@@ -26,6 +26,12 @@ UNKNOWN_ERRORS = {"unknown_gate_trigger", "retrieval_fail"}
 
 st.title("📊 System Showcase")
 st.caption(f"基于 RAG 的文化知识增强问答系统　·　{VERSION}")
+
+if cloud_mode():
+    st.warning(
+        "☁️ 当前为云端演示模式：使用 BM25 关键词检索，"
+        "完整本地版支持 FAISS + BM25 + Rerank。"
+    )
 
 # ---- 1. 系统架构（文字版）----
 st.subheader("① 系统架构")

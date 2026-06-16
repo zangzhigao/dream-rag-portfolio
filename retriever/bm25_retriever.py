@@ -43,6 +43,23 @@ def _tokenize(text: str) -> list[str]:
     return [t for t in jieba.lcut(text) if t.strip()]
 
 
+def query_overlap(query: str, rec: dict) -> float:
+    """查询"实义词"在文档(主题+关键词+正文)中的命中率，范围 [0,1]。
+
+    BM25-only 降级模式下的"语义近似"门控信号：只统计多字词（len≥2，近似实义词），
+    过滤掉"的/去/我/票"等单字虚词——离题问题往往仅靠虚词凑出 BM25 分，
+    实义词命中率却接近 0，借此把它们与真正对题的问题区分开。
+    查询无多字词时（如纯单字/数字），退回用全部 token，避免误杀。
+    """
+    q = {t for t in _tokenize(query) if len(t) >= 2}
+    if not q:
+        q = set(_tokenize(query))
+    if not q:
+        return 0.0
+    d = set(_tokenize(_doc_text(rec)))
+    return len(q & d) / len(q)
+
+
 def _build():
     """惰性构建 BM25 索引，只建一次。"""
     global _bm25, _records

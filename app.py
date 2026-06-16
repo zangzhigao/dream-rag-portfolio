@@ -24,7 +24,7 @@ from pathlib import Path
 
 import embed
 import index
-from retriever import hybrid_topk, faiss_topk, bm25_topk   # 融合 + 原始两路（调试用）
+from retriever import hybrid_topk, faiss_topk, bm25_topk, faiss_available  # 融合 + 原始两路 + 能力探测
 from reranker import rerank                 # 重排
 from prompt import build_rag_prompt
 from llm import call_deepseek
@@ -42,6 +42,8 @@ KB_PATH = BASE_DIR / "data" / "dream_kb.json"
 TOP_K = 5            # 最终送入生成 / 输出的条数
 CANDIDATE_K = 10     # 粗排候选数（hybrid → rerank）
 THRESHOLD = 0.35     # 最高 FAISS 余弦分低于此 → 门控拒答
+LEX_OVERLAP_THRESHOLD = 0.30  # BM25-only 降级：top1 实义词命中率低于此 → 门控拒答
+                              # （经离题/对题样本标定：对题≥0.33，离题≤0.25，0.30 干净分隔）
 
 _id2rec = None
 
@@ -61,13 +63,25 @@ def _kb() -> dict:
 
 
 def ensure_ready() -> None:
-    """缺向量就生成，缺索引就构建。"""
+    """缺向量就生成，缺索引就构建；语义模型不可用时跳过（云端 BM25-only 降级）。"""
+    if not embed.semantic_available():
+        print(">> 语义模型不可用，进入 BM25-only 降级模式（云端演示），跳过向量/索引构建。")
+        return
     if not EMB_PATH.exists():
         print(">> 未发现向量，开始生成 ...")
         embed.main()
     if not INDEX_PATH.exists():
         print(">> 未发现索引，开始构建 ...")
         index.main()
+
+
+def cloud_mode() -> bool:
+    """是否处于云端降级模式（语义检索不可用，仅 BM25）。供 UI 顶部横幅判断。
+
+    消费端（streamlit / pages）经此函数从统一入口获知模式，无需直接 import retriever，
+    符合单一管线架构（arch_check 守卫）。
+    """
+    return not faiss_available()
 
 
 def _clean_sources(model_sources, hits: list[dict]) -> list[dict]:
@@ -89,19 +103,26 @@ def _clean_sources(model_sources, hits: list[dict]) -> list[dict]:
     return cleaned
 
 
-def _compute_confidence(hits: list[dict], threshold: float = THRESHOLD):
-    """基于检索信号的客观置信度。返回 (retrieval_score, coverage_factor, final)。"""
+def _compute_confidence(hits: list[dict], semantic: bool,
+                        top_faiss: float, bm25_hit: bool,
+                        gate_score: float, gate_threshold: float):
+    """基于检索信号的客观置信度。返回 (retrieval_score, coverage_factor, final)。
+
+    semantic=True ：用 FAISS 余弦分判定覆盖度（本地完整模式）。
+    semantic=False：BM25-only 降级模式——无语义交叉验证，实义词命中率达标则覆盖度封顶 0.6。
+    """
     if not hits:
         return 0.0, 0.3, 0.0
     top1_hybrid = hits[0]["hybrid_score"]
-    top_faiss = max(h["faiss_score"] for h in hits)
-    bm25_hit = any(h["bm25_score"] > 0 for h in hits)
-    if top_faiss < threshold:
-        coverage = 0.3
-    elif top_faiss > 0.4 and bm25_hit:
-        coverage = 1.0
+    if semantic:
+        if top_faiss < gate_threshold:
+            coverage = 0.3
+        elif top_faiss > 0.4 and bm25_hit:
+            coverage = 1.0
+        else:
+            coverage = 0.7
     else:
-        coverage = 0.7
+        coverage = 0.6 if gate_score >= gate_threshold else 0.3
     return round(top1_hybrid, 3), coverage, round(top1_hybrid * coverage, 3)
 
 
@@ -116,13 +137,29 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
     # ---- 1 & 2. 检索 (FAISS + BM25) + 混合融合 ----
     hits = hybrid_topk(query, top_k=CANDIDATE_K)
 
+    # 语义路是否真正参与：faiss_score 全为 0 → 云端 BM25-only 降级模式
+    semantic_on = any(h.get("faiss_score", 0) > 0 for h in hits)
+
     # ---- 3. 重排 ----
     reranked = rerank(query, hits, top_k=top_k)
 
-    # ---- 4. 置信度计算 ----
-    rs, coverage, confidence = _compute_confidence(hits, threshold)
+    # ---- 4. 门控信号 + 置信度 ----
     top_faiss = round(max((h["faiss_score"] for h in hits), default=0.0), 3)
-    bm25_hit = any(h["bm25_score"] > 0 for h in hits)
+    top_bm25 = round(max((h["bm25_score"] for h in hits), default=0.0), 3)
+    bm25_hit = top_bm25 > 0
+
+    # 门控信号按模式选择：
+    #   语义模式 → FAISS 余弦分 vs THRESHOLD；
+    #   BM25-only 降级 → top1 实义词命中率 vs LEX_OVERLAP_THRESHOLD
+    #   （纯靠单字虚词命中的离题问题命中率≈0，会被门控拦下，而原始 BM25 分无法区分）。
+    if semantic_on:
+        gate_score, gate_threshold = top_faiss, threshold
+    else:
+        gate_score = round(hits[0].get("lex_overlap", 0.0), 3) if hits else 0.0
+        gate_threshold = LEX_OVERLAP_THRESHOLD
+
+    rs, coverage, confidence = _compute_confidence(
+        hits, semantic_on, top_faiss, bm25_hit, gate_score, gate_threshold)
 
     by_id = {h["id"]: h for h in hits}
     candidates = [{
@@ -134,7 +171,9 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
         "final_score": r["final_score"],
     } for r in reranked]
     retrieval_breakdown = {
+        "mode": "faiss+bm25" if semantic_on else "bm25_only",
         "top_faiss": top_faiss,
+        "top_bm25": top_bm25,
         "bm25_hit": bm25_hit,
         "coverage_factor": coverage,
         "candidates": candidates,
@@ -145,7 +184,7 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
     if debug_mode:
         faiss_raw = faiss_topk(query, top_k=CANDIDATE_K)
         bm25_raw = bm25_topk(query, top_k=CANDIDATE_K)
-        gate_passed = bool(hits) and top_faiss >= threshold
+        gate_passed = bool(hits) and gate_score >= gate_threshold
         debug = {
             "faiss_topk": [{"id": r["id"], "topic": r["topic"],
                             "similarity_score": round(r["similarity_score"], 4)} for r in faiss_raw],
@@ -157,11 +196,14 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
                                "rerank_score": r["rerank_score"], "final_score": r["final_score"]}
                               for r in reranked],
             "threshold_decision_trace": {
+                "mode": "faiss+bm25" if semantic_on else "bm25_only",
+                "gate_score": gate_score,
+                "gate_threshold": gate_threshold,
                 "top_faiss": top_faiss,
-                "threshold": threshold,
+                "top_bm25": top_bm25,
                 "gate_passed": gate_passed,
-                "decision": ("top_faiss ≥ threshold → 进入生成阶段" if gate_passed
-                             else "top_faiss < threshold → 触发 unknown_gate_trigger"),
+                "decision": ("gate_score ≥ threshold → 进入生成阶段" if gate_passed
+                             else "gate_score < threshold → 触发 unknown_gate_trigger"),
             },
         }
 
@@ -172,7 +214,7 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
         但对外只暴露标准 JSON：answer, sources, confidence, error_type, retrieval_breakdown。
         debug_mode 时再附加 debug 字段。
         """
-        et = badcase_v2.classify_error(full, threshold)
+        et = badcase_v2.classify_error(full, gate_threshold)
         if et:
             badcase_v2.log_badcase_v2(query, full, et)
         out = {
@@ -187,7 +229,8 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
         return out
 
     # 门控：检索不达标 → unknown（不调用 LLM）
-    if not hits or top_faiss < threshold:
+    if not hits or gate_score < gate_threshold:
+        gate_name = "FAISS相似度" if semantic_on else "BM25词法分"
         return _finalize({
             "answer": "知识库中没有找到足够相关的信息，暂时无法判断。",
             "sources": [],
@@ -195,8 +238,8 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
             "unknown": True,
             "error_type": "",
             "retrieval_breakdown": retrieval_breakdown,
-            "reason": f"最高FAISS相似度 {top_faiss} 低于阈值 {threshold}。",
-            "retrieval_score": top_faiss,
+            "reason": f"最高{gate_name} {gate_score} 低于阈值 {gate_threshold}。",
+            "retrieval_score": gate_score,
         })
 
     # ---- 6. 生成最终答案（用 rerank 后的候选作为上下文）----
@@ -219,7 +262,7 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
             "error_type": "",
             "retrieval_breakdown": retrieval_breakdown,
             "reason": f"LLM调用失败：{e}",
-            "retrieval_score": top_faiss,
+            "retrieval_score": gate_score,
         })
 
     parsed = parse_json_response(raw)
@@ -232,7 +275,7 @@ def run_pipeline(query: str, top_k: int = TOP_K, threshold: float = THRESHOLD,
         "error_type": "",
         "retrieval_breakdown": retrieval_breakdown,
         "reason": parsed.get("reason", ""),
-        "retrieval_score": top_faiss,
+        "retrieval_score": gate_score,
     })
 
 

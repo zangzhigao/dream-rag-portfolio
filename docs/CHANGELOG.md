@@ -10,6 +10,15 @@
 - 相应更新导入路径（`from evaluator import ...`）、`arch_check.py` 消费端清单与 `README` 命令（`python -m evaluator.evaluate`）。
 - `arch_check.py` 在 Windows GBK 控制台下输出 UTF-8，避免打印 `✅` 时崩溃（修复，不影响退出码）。
 
+### 云端安全降级（Streamlit Cloud）
+- 线上无法下载 BGE 句向量模型时**不再红屏崩溃**：`embed.try_get_model()` / `semantic_available()`
+  捕获加载失败并缓存，`faiss_topk` 改为返回空、`hybrid_topk` 自动降级为 **BM25-only** 检索。
+- 降级模式下的拒答门控改用 **实义词命中率**（多字词 overlap，阈值 0.30）近似语义相关——
+  纯靠单字虚词凑出 BM25 分的离题问题命中率≈0，仍能被门控拦下（保留"敢说不知道"）。
+- 页面顶部显示横幅：「☁️ 当前为云端演示模式：使用 BM25 关键词检索，完整本地版支持 FAISS + BM25 + Rerank」。
+- sources / confidence / unknown / badcase / evaluation 展示全部保留；本地有模型时仍走完整 FAISS+BGE 路径。
+- 可设环境变量 `RAG_FORCE_BM25=1` 显式强制 BM25-only（云端推荐：跳过注定失败的下载尝试）。
+
 ## v1.0-stable — 基线冻结（2026-06-14）
 
 将当前系统冻结为 **v1.0 稳定基线**。

@@ -11,7 +11,7 @@
 hybrid_score 则基于归一化分数计算。
 """
 from .faiss_retriever import faiss_topk
-from .bm25_retriever import bm25_topk
+from .bm25_retriever import bm25_topk, query_overlap
 
 FAISS_WEIGHT = 0.7
 BM25_WEIGHT = 0.3
@@ -37,6 +37,22 @@ def hybrid_topk(query: str, top_k: int = 5,
     """
     faiss_res = faiss_topk(query, top_k=5)
     bm25_res = bm25_topk(query, top_k=5)
+
+    # ---- 云端降级：语义路不可用（faiss_topk 返回空）→ BM25-only 融合 ----
+    # 此时直接用 BM25 归一化分作为 hybrid_score（权重视作 1.0），
+    # 而非 0.3*bm25——否则分数被压到 ≤0.3、置信度与门控全部失真。
+    if not faiss_res:
+        bnorm = _minmax(bm25_res, "bm25_score")
+        merged = [{
+            "id": r["id"],
+            "topic": r["topic"],
+            "faiss_score": 0.0,                          # 语义路未参与，标 0 以示降级
+            "bm25_score": round(r["bm25_score"], 4),
+            "hybrid_score": round(bnorm.get(r["id"], 0.0), 4),
+            "lex_overlap": round(query_overlap(query, r), 4),  # 实义词命中率，供门控判定
+        } for r in bm25_res]
+        merged.sort(key=lambda x: x["hybrid_score"], reverse=True)
+        return merged[:top_k]
 
     faiss_raw = {r["id"]: r["similarity_score"] for r in faiss_res}
     bm25_raw = {r["id"]: r["bm25_score"] for r in bm25_res}

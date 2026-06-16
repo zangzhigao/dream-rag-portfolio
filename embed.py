@@ -32,12 +32,15 @@ QUERY_INSTRUCTION = "为这个句子生成表示以用于检索相关文章："
 LOCAL_MODEL_DIR = BASE_DIR / "models" / "bge-small-zh-v1.5"
 
 _model = None
+_model_load_failed = False     # 记住"加载失败"，避免每次查询都重试慢速网络
 
 
 def get_model() -> SentenceTransformer:
     """惰性加载模型：首次调用时才载入。
 
     若本地已下载模型（models/ 目录）则直接离线加载；否则回退到在线下载。
+    加载失败会抛异常——构建脚本（embed/index）就该硬失败；在线服务请改用
+    try_get_model() / semantic_available() 做安全降级。
     """
     global _model
     if _model is None:
@@ -48,6 +51,37 @@ def get_model() -> SentenceTransformer:
             print(f"[embed] 本地无模型，尝试在线加载 {MODEL_NAME} ...")
             _model = SentenceTransformer(MODEL_NAME)
     return _model
+
+
+def try_get_model():
+    """安全加载句向量模型：成功返回模型，失败返回 None（不抛异常）。
+
+    用于线上环境（如 Streamlit Cloud）：本地无模型且无法访问 HuggingFace 时，
+    不让整个应用崩溃，而是返回 None 触发 BM25-only 降级。失败状态会被缓存，
+    后续调用直接返回 None，不再重复尝试慢速下载。
+    """
+    global _model, _model_load_failed
+    if _model is not None:
+        return _model
+    if _model_load_failed:
+        return None
+    try:
+        return get_model()
+    except Exception as e:      # 下载失败 / 无网络 / 依赖缺失等，一律降级
+        _model_load_failed = True
+        print(f"[embed] 句向量模型加载失败，降级为 BM25-only：{e}")
+        return None
+
+
+def semantic_available() -> bool:
+    """语义检索（FAISS + BGE）此刻是否可用。
+
+    - 显式设置环境变量 RAG_FORCE_BM25=1 时强制返回 False（云端可用它跳过下载尝试）。
+    - 否则取决于句向量模型能否加载（结果缓存）。
+    """
+    if os.environ.get("RAG_FORCE_BM25") == "1":
+        return False
+    return try_get_model() is not None
 
 
 def load_kb() -> list[dict]:

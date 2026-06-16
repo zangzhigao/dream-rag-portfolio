@@ -5,7 +5,7 @@
     from retriever import faiss_topk, bm25_topk, hybrid_topk
 """
 from .bm25_retriever import bm25_topk
-from .faiss_retriever import faiss_topk
+from .faiss_retriever import faiss_topk, faiss_available
 from .hybrid_retrieval import hybrid_topk
 
-__all__ = ["faiss_topk", "bm25_topk", "hybrid_topk"]
+__all__ = ["faiss_topk", "bm25_topk", "hybrid_topk", "faiss_available"]

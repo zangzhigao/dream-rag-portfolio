@@ -21,7 +21,7 @@ import pandas as pd
 import streamlit as st
 from PIL import Image, ImageDraw, ImageFont
 
-from app import run_pipeline, ensure_ready
+from app import run_pipeline, ensure_ready, cloud_mode
 from evaluator import evaluate
 
 st.set_page_config(page_title="RAG 统一问答与评测", page_icon="🔮")
@@ -130,6 +130,13 @@ def _conf_color(c):
 
 st.title("🔮 RAG 统一问答系统")
 st.caption("混合检索 (FAISS + BM25) → 重排 → 生成 ｜ 含置信度与错误分类 ｜ v1.0-stable")
+
+# ---- 云端降级模式横幅（语义模型不可用时）----
+if cloud_mode():
+    st.warning(
+        "☁️ 当前为云端演示模式：使用 BM25 关键词检索，"
+        "完整本地版支持 FAISS + BM25 + Rerank。"
+    )
 
 # ---- 顶部：系统说明卡片 ----
 with st.container(border=True):
